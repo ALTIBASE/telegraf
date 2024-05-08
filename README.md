@@ -29,7 +29,7 @@ git clone https://github.com/influxdata/telegraf.git telegraf
 ### 3. Clone the Altibase input plugin repository:
 
 ```
-git clone https://github.com/jiee-altibase/telegraf.git telegraf_altibase
+git clone https://github.com/ALTIBASE/telegraf.git telegraf_altibase
 ```
 
 ### 4. Copy the Altibase input plugin into the Telegraf input plugin directory
