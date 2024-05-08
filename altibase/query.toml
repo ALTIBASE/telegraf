@@ -1,0 +1,788 @@
+Title="Altibase Monitoring Metrics"
+
+[[sql_metric]]
+measurement="altibase"
+tags=[]
+fields=["WORKING_TIME"]
+pivot=false
+enable=true
+sql="""
+SELECT WORKING_TIME_SEC AS WORKING_TIME
+FROM V$INSTANCE
+"""
+
+[[sql_metric]]
+measurement="altibase"
+tags=[]
+fields=["ALTIBASE_VERSION"]
+pivot=false
+enable=true
+sql="""
+SELECT PRODUCT_VERSION AS ALTIBASE_VERSION
+FROM V$VERSION
+"""
+
+[[sql_metric]]
+measurement="altibase"
+tags=[]
+fields=["ARCHIVE_MODE"]
+pivot=false
+enable=true
+sql="""
+SELECT ARCHIVE_MODE 
+FROM V$ARCHIVE
+"""
+
+[[sql_metric]]
+measurement="altibase"
+tags=[]
+fields=["COUNT"]
+pivot=true
+pivot_key="NAME"
+enable=true
+sql="""
+SELECT 'SESSION_COUNT' AS NAME
+     , COUNT(*) AS COUNT
+FROM V$SESSION
+UNION ALL
+SELECT 'STATEMENT_COUNT' AS NAME
+     , COUNT(*) AS COUNT
+FROM V$STATEMENT
+"""
+
+[[sql_metric]]
+measurement="altibase_srv_thr"
+tags=[]
+fields=["COUNT"]
+pivot=true
+pivot_key="NAME"
+enable=true
+sql="""
+SELECT TYPE AS NAME
+     , COUNT(*) AS COUNT
+FROM V$SERVICE_THREAD
+GROUP BY TYPE
+UNION ALL
+SELECT STATE AS NAME
+     , COUNT(*) AS COUNT
+FROM V$SERVICE_THREAD
+GROUP BY STATE
+UNION ALL
+SELECT RUN_MODE AS NAME
+     , COUNT(*) AS COUNT
+FROM V$SERVICE_THREAD
+GROUP BY RUN_MODE
+UNION ALL
+SELECT 'TOTAL_COUNT' AS NAME
+     , COUNT(*) AS COUNT
+FROM V$SERVICE_THREAD
+"""
+
+[[sql_metric]]
+measurement="altibase"
+tags=[]
+fields=["MEMSTAT_MAX_TOTAL", "MEMSTAT_ALLOC"]
+pivot=false
+enable=true
+sql="""
+SELECT SUM(MAX_TOTAL_SIZE) AS MEMSTAT_MAX_TOTAL
+     , SUM(ALLOC_SIZE) AS MEMSTAT_ALLOC
+FROM V$MEMSTAT
+"""
+
+[[sql_metric]]
+measurement="altibase_memstat_max"
+tags=[]
+fields=["MAX_TOTAL_SIZE"]
+pivot=true
+pivot_key="NAME"
+enable=true
+sql="""
+SELECT NAME
+     , MAX_TOTAL_SIZE
+FROM V$MEMSTAT
+ORDER BY MAX_TOTAL_SIZE DESC
+LIMIT 10
+"""
+
+[[sql_metric]]
+measurement="altibase_memstat_alloc"
+tags=[]
+fields=["ALLOC_SIZE"]
+pivot=true
+pivot_key="NAME"
+enable=true
+sql="""
+SELECT NAME
+     , ALLOC_SIZE
+FROM V$MEMSTAT
+ORDER BY ALLOC_SIZE DESC
+LIMIT 10
+"""
+
+[[sql_metric]]
+measurement="altibase_memstat_usage"
+tags=[]
+fields=["USAGE_PERCENTAGE"]
+pivot=true
+pivot_key="NAME"
+enable=true
+sql="""
+SELECT A.NAME
+     , A.MAX_TOTAL_SIZE / B.TOTAL_USAGE AS USAGE_PERCENTAGE
+FROM V$MEMSTAT A
+   , (SELECT SUM(MAX_TOTAL_SIZE) AS TOTAL_USAGE
+      FROM V$MEMSTAT) B
+ORDER BY USAGE_PERCENTAGE DESC
+LIMIT 10
+"""
+
+[[sql_metric]]
+measurement="altibase_tbs_total"
+tags=[]
+fields=["TOTAL"]
+pivot=true
+pivot_key="TBS_NAME"
+enable=true
+sql="""
+SELECT TBS_NAME || '(' || TBS_TYPE || ')' TBS_NAME, TOTAL
+  FROM (SELECT ID TBS_ID
+             , DECODE(TYPE, 0, 'MEM_SYS_DIC', 1, 'MEM_SYS_DATA', 2, 'MEM_USER_DATA', 8, 'VOL_USER_DATA') TBS_TYPE
+             , NAME TBS_NAME
+             , DECODE(M.MAXSIZE, 140737488322560, D.MEM_MAX_DB_SIZE , 0 , T.TOTAL_PAGE_COUNT * T.PAGE_SIZE, M.MAXSIZE) MAX
+             , M.ALLOC_PAGE_COUNT * T.PAGE_SIZE TOTAL
+             , NVL(M.ALLOC_PAGE_COUNT-M.FREE_PAGE_COUNT, T.TOTAL_PAGE_COUNT)*PAGE_SIZE ALLOC
+             , NVL(MT.USED, 0) USED
+             , DECODE(T.STATE, 1, 'OFFLINE', 2, 'ONLINE', 5, 'OFFLINE BACKUP', 6, 'ONLINE BACKUP', 128, 'DROPPED', 'DISCARDED') STATE
+             , DECODE(M.AUTOEXTEND_MODE, 1, 'ON', 'OFF') 'AUTOEXTEND'
+          FROM V$DATABASE D
+             , V$TABLESPACES T
+             , (SELECT SPACE_ID
+                     , SPACE_NAME
+                     , ALLOC_PAGE_COUNT
+                     , FREE_PAGE_COUNT
+                     , DECODE(MAX_SIZE, 0, (SELECT VALUE1
+                                              FROM V$PROPERTY
+                                              WHERE NAME = 'VOLATILE_MAX_DB_SIZE'), MAX_SIZE) AS MAXSIZE
+                     , AUTOEXTEND_MODE
+                  FROM V$VOL_TABLESPACES
+                 UNION ALL
+                SELECT SPACE_ID
+                     , SPACE_NAME
+                     , ALLOC_PAGE_COUNT
+                     , FREE_PAGE_COUNT
+                     , MAXSIZE
+                     , AUTOEXTEND_MODE
+                  FROM V$MEM_TABLESPACES ) M LEFT OUTER JOIN (SELECT TABLESPACE_ID, SUM((FIXED_USED_MEM + VAR_USED_MEM)) USED
+                                                                FROM V$MEMTBL_INFO
+                                                               GROUP BY TABLESPACE_ID ) MT ON M.SPACE_ID = MT.TABLESPACE_ID
+         WHERE T.ID = M.SPACE_ID)
+UNION ALL
+SELECT TBS_NAME || '(' || TBS_TYPE || ')' TBS_NAME, TOTAL
+  FROM (SELECT T.ID TBS_ID
+             , DECODE(TYPE, 3, 'DISK_SYS_DATA', 4, 'DISK_USER_DATA', 5, 'DISK_SYS_TEMP', 6, 'DISK_USER_TEMP', 7, 'DISK_SYS_UNDO') TBS_TYPE
+             , NAME TBS_NAME
+             , D.MAX * PAGE_SIZE MAX
+             , TOTAL_PAGE_COUNT * PAGE_SIZE TOTAL
+             , DECODE(TYPE, 7, U.TOTAL_EXT_CNT * PROP.EXTENT_SIZE, ALLOCATED_PAGE_COUNT * PAGE_SIZE) ALLOC
+             , DECODE(TYPE, 3, NVL(DS.USED, 0) , 4, NVL(DS.USED, 0) , 7, (U.TX_EXT_CNT+U.USED_EXT_CNT+U.UNSTEALABLE_EXT_CNT) * PROP.EXTENT_SIZE , ALLOCATED_PAGE_COUNT * PAGE_SIZE ) USED
+             , DECODE(STATE, 1, 'OFFLINE', 2, 'ONLINE', 5, 'OFFLINE BACKUP', 6, 'ONLINE BACKUP', 128, 'DROPPED', 'DISCARDED') STATE
+             , D.AUTOEXTEND
+          FROM V$TABLESPACES T LEFT OUTER JOIN(SELECT SPACE_ID , SUM(TOTAL_USED_SIZE) USED
+                  FROM X$SEGMENT
+                 GROUP BY SPACE_ID) DS ON DS.SPACE_ID = T.ID
+             , (SELECT SPACEID
+                     , SUM(DECODE(MAXSIZE, 0, CURRSIZE, MAXSIZE)) AS MAX
+                     , DECODE(MAX(AUTOEXTEND), 1, 'ON', 'OFF') 'AUTOEXTEND'
+                  FROM V$DATAFILES
+                 GROUP BY SPACEID ) D
+             , V$DISK_UNDO_USAGE U
+             , (SELECT VALUE1 EXTENT_SIZE
+                  FROM V$PROPERTY
+                 WHERE NAME = 'SYS_UNDO_TBS_EXTENT_SIZE') PROP
+         WHERE T.ID = D.SPACEID )
+"""
+
+[[sql_metric]]
+measurement="altibase_tbs_usage"
+tags=[]
+fields=["USAGE"]
+pivot=true
+pivot_key="TBS_NAME"
+enable=true
+sql="""
+SELECT TBS_NAME || '(' || TBS_TYPE || ')' TBS_NAME
+     , USED/MAX AS USAGE
+  FROM (SELECT ID TBS_ID
+             , DECODE(TYPE, 0, 'MEM_SYS_DIC', 1, 'MEM_SYS_DATA', 2, 'MEM_USER_DATA', 8, 'VOL_USER_DATA') TBS_TYPE
+             , NAME TBS_NAME
+             , DECODE(M.MAXSIZE, 140737488322560, D.MEM_MAX_DB_SIZE , 0 , T.TOTAL_PAGE_COUNT * T.PAGE_SIZE, M.MAXSIZE) MAX
+             , M.ALLOC_PAGE_COUNT * T.PAGE_SIZE TOTAL
+             , NVL(M.ALLOC_PAGE_COUNT-M.FREE_PAGE_COUNT, T.TOTAL_PAGE_COUNT)*PAGE_SIZE ALLOC
+             , NVL(MT.USED, 0) USED
+             , DECODE(T.STATE, 1, 'OFFLINE', 2, 'ONLINE', 5, 'OFFLINE BACKUP', 6, 'ONLINE BACKUP', 128, 'DROPPED', 'DISCARDED') STATE
+             , DECODE(M.AUTOEXTEND_MODE, 1, 'ON', 'OFF') 'AUTOEXTEND'
+          FROM V$DATABASE D
+             , V$TABLESPACES T
+             , (SELECT SPACE_ID
+                     , SPACE_NAME
+                     , ALLOC_PAGE_COUNT
+                     , FREE_PAGE_COUNT
+                     , DECODE(MAX_SIZE, 0, (SELECT VALUE1
+                                              FROM V$PROPERTY
+                                              WHERE NAME = 'VOLATILE_MAX_DB_SIZE'), MAX_SIZE) AS MAXSIZE
+                     , AUTOEXTEND_MODE
+                  FROM V$VOL_TABLESPACES
+                 UNION ALL
+                SELECT SPACE_ID
+                     , SPACE_NAME
+                     , ALLOC_PAGE_COUNT
+                     , FREE_PAGE_COUNT
+                     , MAXSIZE
+                     , AUTOEXTEND_MODE
+                  FROM V$MEM_TABLESPACES ) M LEFT OUTER JOIN (SELECT TABLESPACE_ID, SUM((FIXED_USED_MEM + VAR_USED_MEM)) USED
+                                                                FROM V$MEMTBL_INFO
+                                                               GROUP BY TABLESPACE_ID ) MT ON M.SPACE_ID = MT.TABLESPACE_ID
+         WHERE T.ID = M.SPACE_ID)
+UNION ALL
+SELECT TBS_NAME || '(' || TBS_TYPE || ')' TBS_NAME
+     , USED/MAX AS USAGE
+  FROM (SELECT T.ID TBS_ID
+             , DECODE(TYPE, 3, 'DISK_SYS_DATA', 4, 'DISK_USER_DATA', 5, 'DISK_SYS_TEMP', 6, 'DISK_USER_TEMP', 7, 'DISK_SYS_UNDO') TBS_TYPE
+             , NAME TBS_NAME
+             , D.MAX * PAGE_SIZE MAX
+             , TOTAL_PAGE_COUNT * PAGE_SIZE TOTAL
+             , DECODE(TYPE, 7, U.TOTAL_EXT_CNT * PROP.EXTENT_SIZE, ALLOCATED_PAGE_COUNT * PAGE_SIZE) ALLOC
+             , DECODE(TYPE, 3, NVL(DS.USED, 0) , 4, NVL(DS.USED, 0) , 7, (U.TX_EXT_CNT+U.USED_EXT_CNT+U.UNSTEALABLE_EXT_CNT) * PROP.EXTENT_SIZE , ALLOCATED_PAGE_COUNT * PAGE_SIZE ) USED
+             , DECODE(STATE, 1, 'OFFLINE', 2, 'ONLINE', 5, 'OFFLINE BACKUP', 6, 'ONLINE BACKUP', 128, 'DROPPED', 'DISCARDED') STATE
+             , D.AUTOEXTEND
+          FROM V$TABLESPACES T LEFT OUTER JOIN(SELECT SPACE_ID , SUM(TOTAL_USED_SIZE) USED
+                  FROM X$SEGMENT
+                 GROUP BY SPACE_ID) DS ON DS.SPACE_ID = T.ID
+             , (SELECT SPACEID
+                     , SUM(DECODE(MAXSIZE, 0, CURRSIZE, MAXSIZE)) AS MAX
+                     , DECODE(MAX(AUTOEXTEND), 1, 'ON', 'OFF') 'AUTOEXTEND'
+                  FROM V$DATAFILES
+                 GROUP BY SPACEID ) D
+             , V$DISK_UNDO_USAGE U
+             , (SELECT VALUE1 EXTENT_SIZE
+                  FROM V$PROPERTY
+                 WHERE NAME = 'SYS_UNDO_TBS_EXTENT_SIZE') PROP
+         WHERE T.ID = D.SPACEID )
+"""
+
+[[sql_metric]]
+measurement="altibase_tbs_state"
+tags=[]
+fields=["STATE"]
+pivot=true
+pivot_key="NAME"
+enable=true
+sql="""
+SELECT NAME
+     , DECODE(STATE, 1, 'OFFLINE'
+                   , 2, 'ONLINE'
+                   , 5, 'OFFLINE BACKUP'
+                   , 6, 'ONLINE BACKUP'
+                 , 128, 'DROPPED', 'DISCARD') STATE
+FROM V$TABLESPACES
+"""
+
+[[sql_metric]]
+measurement="altibase"
+tags=[]
+fields=["HIT_RATIO", "VICTIM_FAILS"]
+pivot=false
+enable=true
+sql="""
+SELECT HIT_RATIO, VICTIM_FAILS
+FROM V$BUFFPOOL_STAT
+"""
+
+[[sql_metric]]
+measurement="altibase"
+tags=[]
+fields=["GC_GAP"]
+pivot=true
+pivot_key="GC_NAME"
+enable=true
+sql="""
+SELECT GC_NAME
+     , ADD_OID_CNT - GC_OID_CNT AS GC_GAP
+FROM V$MEMGC
+"""
+
+[[sql_metric]]
+measurement="altibase_tx_of_memory_view_scn"
+tags=[]
+fields=["SESSION_ID", "TX_ID", "TOTAL_TIME", "EXECUTE_TIME", "QUERY"]
+pivot=false
+enable=true
+sql="""
+SELECT ST.SESSION_ID
+     , TX_ID
+     , TOTAL_TIME
+     , EXECUTE_TIME
+     , QUERY
+FROM V$STATEMENT ST,
+     V$TRANSACTION TX
+WHERE ST.TX_ID = TX.ID
+  AND TX_ID IN (SELECT ID
+                FROM V$TRANSACTION
+                   , (SELECT MINMEMSCNINTXS FROM V$MEMGC LIMIT 1) GC
+                WHERE MEMORY_VIEW_SCN = GC.MINMEMSCNINTXS
+                   OR MIN_MEMORY_LOB_VIEW_SCN = GC.MINMEMSCNINTXS)
+  AND ST.SESSION_ID != SESSION_ID()
+  AND TX.SESSION_ID <> SESSION_ID()
+ORDER BY 3 DESC
+LIMIT 1
+"""
+
+[[sql_metric]]
+measurement="altibase"
+tags=[]
+fields=["LOGFILE_OLDEST", "LOGFILE_CURRENT", "LOGFILE_GAP"]
+pivot=false
+enable=true
+sql="""
+SELECT OLDEST_ACTIVE_LOGFILE AS LOGFILE_OLDEST
+     , CURRENT_LOGFILE AS LOGFILE_CURRENT
+     , CURRENT_LOGFILE - OLDEST_ACTIVE_LOGFILE AS LOGFILE_GAP
+FROM V$ARCHIVE
+"""
+
+[[sql_metric]]
+measurement="altibase"
+tags=[]
+fields=["LF_PREPARE_WAIT_COUNT"]
+pivot=false
+enable=true
+sql="""
+SELECT LF_PREPARE_WAIT_COUNT 
+FROM V$LFG
+"""
+
+[[sql_metric]]
+measurement="altibase"
+tags=[]
+fields=["COUNT"]
+pivot=true
+pivot_key="LOCK_STATE"
+enable=true
+sql="""
+SELECT DECODE(LOCK_STMT.STATE, 0, 'LOCK_HOLD_COUNT', 1, 'LOCK_WAIT_COUNT') AS LOCK_STATE
+     , COUNT(*) AS COUNT
+FROM SYSTEM_.SYS_TABLES_ TBL
+   , V$LOCK_STATEMENT LOCK_STMT
+   , V$STATEMENT STMT LEFT OUTER JOIN V$LOCK_WAIT LOCK_WAIT ON STMT.TX_ID = LOCK_WAIT.TRANS_ID
+WHERE TBL.TABLE_OID = LOCK_STMT.TABLE_OID
+  AND STMT.SESSION_ID = LOCK_STMT.SESSION_ID
+  AND STMT.TX_ID = LOCK_STMT.TX_ID
+  AND LOCK_STMT.STATE IN (0,1)
+GROUP BY LOCK_STMT.STATE
+"""
+
+[[sql_metric]]
+measurement="altibase"
+tags=[]
+fields=["COUNT"]
+pivot=true
+pivot_key="NAME"
+enable=true
+sql="""
+SELECT 'LONG_RUN_QUERY_COUNT' AS NAME
+     , COUNT(*) AS COUNT
+FROM V$STATEMENT
+WHERE EXECUTE_FLAG = 1
+  AND EXECUTE_TIME/1000000 > 1
+UNION ALL
+SELECT 'UTRANS_QUERY_COUNT' AS NAME
+     , COUNT(*) AS COUNT
+FROM V$TRANSACTION TR,
+     V$STATEMENT ST,
+     V$SESSIONMGR,
+     V$SESSION SS
+WHERE TR.ID = ST.TX_ID
+  AND ST.SESSION_ID = SS.ID
+  AND TR.FIRST_UPDATE_TIME != 0                 
+  AND (BASE_TIME - TR.FIRST_UPDATE_TIME) > 1   
+UNION ALL
+SELECT 'FULLSCAN_QUERY_COUNT' AS NAME
+     , COUNT(*) AS COUNT
+FROM V$STATEMENT T,
+     V$SESSION S
+WHERE S.ID = T.SESSION_ID
+  AND (MEM_CURSOR_FULL_SCAN > 0 OR DISK_CURSOR_FULL_SCAN > 0)
+  AND UPPER(QUERY) NOT LIKE '%INSERT%'
+  AND CLIENT_INFO != 'telegraf'
+"""
+
+[[sql_metric]]
+measurement="altibase_lock_hold_info"
+tags=[]
+fields=["SESSION_ID", "TX_ID", "IS_GRANT", "LOCK_DESC", "TABLE_NAME", "TOTAL_TIME", "QUERY"]
+pivot=false
+enable=true
+sql="""
+SELECT STMT.SESSION_ID AS SESSION_ID
+     , STMT.TX_ID AS TX_ID
+     , L.IS_GRANT AS IS_GRANT
+     , L.LOCK_DESC AS LOCK_DESC
+     , TBL.TABLE_NAME AS TABLE_NAME
+     , STMT.TOTAL_TIME AS TOTAL_TIME
+     , SUBSTR(STMT.QUERY, 1, 50) AS QUERY
+FROM SYSTEM_.SYS_TABLES_ TBL
+   , V$STATEMENT STMT
+   , V$LOCK L
+   , V$LOCK_WAIT LOCK_WAIT
+WHERE L.TRANS_ID = LOCK_WAIT.WAIT_FOR_TRANS_ID
+  AND L.TABLE_OID = TBL.TABLE_OID
+  AND L.TRANS_ID = STMT.TX_ID
+ORDER BY STMT.TOTAL_TIME DESC
+LIMIT 1
+"""
+
+[[sql_metric]]
+measurement="altibase_lock_wait_info"
+tags=[]
+fields=["SESSION_ID", "TX_ID", "IS_GRANT", "LOCK_STATE", "WAIT_FOR_TX_ID",
+        "LOCK_DESC", "TABLE_NAME", "TOTAL_TIME", "QUERY"]
+pivot=false
+enable=true
+sql="""
+SELECT STMT.SESSION_ID AS SESSION_ID
+     , STMT.TX_ID AS TX_ID
+     , L.IS_GRANT AS IS_GRANT
+     , NVL(LOCK_WAIT.WAIT_FOR_TRANS_ID, -1) AS WAIT_FOR_TX_ID
+     , L.LOCK_DESC AS LOCK_DESC
+     , TBL.TABLE_NAME AS TABLE_NAME
+     , STMT.TOTAL_TIME AS TOTAL_TIME
+     , SUBSTR(STMT.QUERY, 1, 50) AS QUERY
+FROM SYSTEM_.SYS_TABLES_ TBL
+   , V$STATEMENT STMT
+   , V$LOCK L
+   , V$LOCK_WAIT LOCK_WAIT
+WHERE L.TRANS_ID = LOCK_WAIT.TRANS_ID
+  AND L.TABLE_OID = TBL.TABLE_OID
+  AND L.TRANS_ID = STMT.TX_ID
+ORDER BY STMT.TOTAL_TIME DESC
+LIMIT 1
+"""
+
+[[sql_metric]]
+measurement="altibase_long_run_query"
+tags=[]
+fields=["SESSION_ID", "STMT_ID", "TX_ID", "PREPARE_TIME", "FETCH_TIME", "EXECUTE_TIME", "TOTAL_TIME",
+        "LAST_START_TIME", "QUERY"]
+pivot=false
+enable=true
+sql="""
+SELECT SESSION_ID
+     , ID STMT_ID
+     , TX_ID
+     , PARSE_TIME+VALIDATE_TIME+OPTIMIZE_TIME AS PREPARE_TIME
+     , FETCH_TIME 
+     , EXECUTE_TIME 
+     , TOTAL_TIME 
+     , DECODE(LAST_QUERY_START_TIME, 0, '-',
+                                     TO_CHAR(TO_DATE('1970010109', 'YYYYMMDDHH') + LAST_QUERY_START_TIME / (24*60*60),
+                                             'YYYY/MM/DD HH:MI:SS')) LAST_START_TIME
+     , NVL(LTRIM(QUERY), 'NONE') QUERY
+FROM V$STATEMENT
+WHERE EXECUTE_FLAG = 1
+  AND EXECUTE_TIME/1000000 > 1
+ORDER BY EXECUTE_TIME DESC
+LIMIT 1
+"""
+
+[[sql_metric]]
+measurement="altibase_utrans_query"
+tags=[]
+fields=["SESSION_ID", "CLIENT_IP", "CLIENT_PID", "CLIENT_APP_INFO", "UTRANS_TIME", "EXECUTE_TIME", "TOTAL_TIME",
+        "LAST_START_TIME", "QUERY"]
+pivot=false
+enable=true
+sql="""
+SELECT ST.SESSION_ID
+     , SS.COMM_NAME CLIENT_IP
+     , SS.CLIENT_PID
+     , SS.CLIENT_APP_INFO
+     , (BASE_TIME - TR.FIRST_UPDATE_TIME) AS UTRANS_TIME
+     , EXECUTE_TIME
+     , TOTAL_TIME
+     , DECODE(LAST_QUERY_START_TIME, 0, '-',
+                                     TO_CHAR(TO_DATE('1970010109', 'YYYYMMDDHH') + LAST_QUERY_START_TIME / (24*60*60),
+                                             'YYYY/MM/DD HH:MI:SS')) LAST_START_TIME
+     , NVL(LTRIM(ST.QUERY), 'NONE') QUERY
+FROM V$TRANSACTION TR,
+     V$STATEMENT ST,
+     V$SESSIONMGR,
+     V$SESSION SS
+WHERE TR.ID = ST.TX_ID
+  AND ST.SESSION_ID = SS.ID
+  AND TR.FIRST_UPDATE_TIME != 0                 -- 0:read only transaction
+  AND (BASE_TIME - TR.FIRST_UPDATE_TIME) > 1    -- unit:sec
+ORDER BY UTRANS_TIME DESC
+LIMIT 1
+"""
+
+[[sql_metric]]
+measurement="altibase_fullscan_query"
+tags=[]
+fields=["SESSION_ID", "CLIENT_IP", "CLIENT_PID", "CLIENT_APP_INFO", "PREPARE_TIME", "FETCH_TIME", "EXECUTE_TIME",
+        "TOTAL_TIME", "LAST_START_TIME", "QUERY"]
+pivot=false
+enable=true
+sql="""
+SELECT SESSION_ID
+     , S.COMM_NAME CLIENT_IP
+     , S.CLIENT_PID
+     , S.CLIENT_APP_INFO
+     , PARSE_TIME+VALIDATE_TIME+OPTIMIZE_TIME AS PREPARE_TIME
+     , FETCH_TIME
+     , EXECUTE_TIME
+     , TOTAL_TIME
+     , DECODE(LAST_QUERY_START_TIME, 0, '-',
+                                     TO_CHAR(TO_DATE('1970010109', 'YYYYMMDDHH') + LAST_QUERY_START_TIME / (24*60*60),
+                                             'YYYY/MM/DD HH:MI:SS')) LAST_START_TIME
+     , NVL(LTRIM(QUERY), 'NONE') QUERY
+FROM V$STATEMENT T,
+     V$SESSION S
+WHERE S.ID = T.SESSION_ID
+  AND (MEM_CURSOR_FULL_SCAN > 0 OR DISK_CURSOR_FULL_SCAN > 0)
+  AND UPPER(QUERY) NOT LIKE '%INSERT%'
+  AND CLIENT_INFO != 'telegraf'
+ORDER BY EXECUTE_TIME DESC
+LIMIT 1
+"""
+
+[[sql_metric]]
+measurement="altibase"
+tags=[]
+fields=["COUNT"]
+pivot=true
+pivot_key="NAME"
+enable=true
+sql="""
+SELECT 'REP_SENDER_COUNT' AS NAME
+     , COUNT(*) AS COUNT
+FROM V$REPSENDER
+UNION ALL
+SELECT 'REP_RECEIVER_COUNT' AS NAME
+     , COUNT(*) AS COUNT
+FROM V$REPRECEIVER
+"""
+
+[[sql_metric]]
+measurement="altibase_rep_gap"
+tags=[]
+fields=["REP_GAP"]
+pivot=true
+pivot_key="REP_NAME"
+enable=true
+sql="""
+SELECT REP_NAME || '_GAP' AS REP_NAME
+     , REP_GAP
+FROM V$REPGAP
+"""
+
+[[sql_metric]]
+measurement="altibase_file_io_reads"
+tags=[]
+fields=["PHY_READ"]
+pivot=true
+pivot_key="FILE_NAME"
+enable=true
+sql="""
+SELECT NAME FILE_NAME
+     , A.PHYRDS PHY_READ
+ FROM V$FILESTAT A,
+      V$DATAFILES B
+WHERE A.SPACEID = B.SPACEID
+  AND A.FILEID = B.ID
+  AND A.PHYRDS > 0
+ORDER BY A.PHYRDS DESC, ROWNUM DESC
+LIMIT 10
+"""
+
+[[sql_metric]]
+measurement="altibase_file_io_writes"
+tags=[]
+fields=["PHY_WRITE"]
+pivot=true
+pivot_key="FILE_NAME"
+enable=true
+sql="""
+SELECT NAME FILE_NAME
+     , A.PHYWRTS PHY_WRITE
+ FROM V$FILESTAT A,
+      V$DATAFILES B
+WHERE A.SPACEID = B.SPACEID
+  AND A.FILEID = B.ID
+ORDER BY A.PHYRDS DESC, ROWNUM DESC
+LIMIT 10
+"""
+
+[[sql_metric]]
+measurement="altibase_file_io_wait"
+tags=[]
+fields=["AVERAGE_WAIT"]
+pivot=true
+pivot_key="NAME"
+enable=true
+sql="""
+SELECT B.NAME
+     , A.SINGLEBLKRDTIM/A.SINGLEBLKRDS AS AVERAGE_WAIT
+FROM V$FILESTAT A,
+     V$DATAFILES B
+WHERE A.SPACEID = B.SPACEID
+  AND A.FILEID = B.ID
+  AND A.SINGLEBLKRDS > 0
+"""
+
+[[sql_metric]]
+measurement="altibase_mem_tbl_usage"
+tags=[]
+fields=["ALLOC"]
+pivot=true
+pivot_key="TABLE_NAME"
+enable=true
+sql="""
+SELECT TABLE_NAME
+     , (FIXED_ALLOC_MEM+VAR_ALLOC_MEM) AS ALLOC
+FROM SYSTEM_.SYS_TABLES_ A, V$MEMTBL_INFO B
+WHERE A.USER_ID != 1
+  AND A.TABLE_OID = B.TABLE_OID
+ORDER BY ALLOC DESC
+LIMIT 5
+"""
+
+[[sql_metric]]
+measurement="altibase"
+tags=[]
+fields=["ALLOC"]
+pivot=true
+pivot_key="NAME"
+enable=true
+sql="""
+SELECT 'MEMORY_TBL_USAGE' AS NAME
+     , SUM(FIXED_ALLOC_MEM) + SUM(VAR_ALLOC_MEM) AS ALLOC
+FROM V$MEMTBL_INFO
+"""
+
+[[sql_metric]]
+measurement="altibase"
+tags=[]
+fields=["ALLOC"]
+pivot=true
+pivot_key="NAME"
+enable=true
+sql="""
+SELECT 'DISK_TBL_USAGE' AS NAME
+     , SUM(DISK_TOTAL_PAGE_CNT * 8192) AS ALLOC
+FROM V$DISKTBL_INFO
+"""
+
+[[sql_metric]]
+measurement="altibase_disk_tbl_usage"
+tags=[]
+fields=["ALLOC"]
+pivot=true
+pivot_key="TABLE_NAME"
+enable=true
+sql="""
+SELECT TABLE_NAME
+     , DISK_TOTAL_PAGE_CNT * PAGE_SIZE AS ALLOC
+FROM V$TABLESPACES A
+   , V$DISKTBL_INFO B
+   , SYSTEM_.SYS_TABLES_ C
+WHERE A.ID = B.TABLESPACE_ID
+  AND B.TABLE_OID = C.TABLE_OID
+ORDER BY ALLOC DESC
+LIMIT 5
+"""
+
+[[sql_metric]]
+measurement="altibase_queue_usage"
+tags=[]
+fields=["ALLOC"]
+pivot=true
+pivot_key="TABLE_NAME"
+enable=true
+sql="""
+SELECT B.TABLE_NAME
+     , C.FIXED_ALLOC_MEM+C.VAR_ALLOC_MEM AS ALLOC
+  FROM SYSTEM_.SYS_USERS_ A
+     , SYSTEM_.SYS_TABLES_ B
+     , V$MEMTBL_INFO C
+     , V$TABLESPACES D
+ WHERE 1=1
+   AND A.USER_NAME <> 'SYSTEM_'
+   AND B.TABLE_TYPE = 'Q'
+   AND A.USER_ID = B.USER_ID
+   AND B.TABLE_OID = C.TABLE_OID
+   AND B.TBS_ID = D.ID
+"""
+
+[[sql_metric]]
+measurement="altibase_segment_usage"
+tags=[]
+fields=["USAGE"]
+pivot=true
+pivot_key="NAME"
+enable=true
+sql="""
+SELECT NAME
+     , SUM(EXTENT_TOTAL_COUNT*EXTENT_PAGE_COUNT*PAGE_SIZE) AS USAGE
+FROM V$TABLESPACES A
+   , V$SEGMENT B
+WHERE A.ID = B.SPACE_ID
+GROUP BY NAME
+"""
+
+[[sql_metric]]
+measurement="altibase_sysstat"
+tags=[]
+fields=["VALUE"]
+pivot=true
+pivot_key="NAME"
+enable=true
+sql="""
+SELECT NAME
+     , VALUE
+FROM V$SYSSTAT
+WHERE SEQNUM < 88
+"""
+
+[[sql_metric]]
+measurement="altibase_system_event"
+tags=[]
+fields=["TIME_WAITED"]
+pivot=true
+pivot_key="NAME"
+enable=true
+sql="""
+SELECT EVENT || '(' || WAIT_CLASS || ')' AS NAME
+     , TIME_WAITED
+FROM V$SYSTEM_EVENT
+WHERE WAIT_CLASS != 'Idle'
+ORDER BY TIME_WAITED DESC
+LIMIT 10
+"""
+
+[[sql_metric]]
+measurement="altibase_session_event"
+tags=[]
+fields=["TIME_WAITED"]
+pivot=true
+pivot_key="NAME"
+enable=true
+sql="""
+SELECT EVENT || '(' || WAIT_CLASS || ')' AS NAME
+     , TIME_WAITED
+FROM V$SESSION_EVENT
+WHERE WAIT_CLASS != 'Idle'
+ORDER BY TIME_WAITED DESC
+LIMIT 10
+"""
+
