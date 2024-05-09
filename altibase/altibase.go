@@ -145,8 +145,6 @@ func (a *Altibase) runSQL(acc telegraf.Accumulator) error {
 			}
 			result_data = append(result_data, entry)
 		}
-
-		//fmt.Println("result_data : ", result_data)
 		a.accRow(element, acc, result_data)
 	}
 
@@ -173,7 +171,6 @@ func (a *Altibase) getResult(row scanner, columns []string) (map[string]interfac
 	for i, col := range columns {
 		var v interface{}
 		val := value_data[i]
-		//fmt.Println("val", val)
 
 		b, ok := val.([]byte)
 
@@ -182,7 +179,6 @@ func (a *Altibase) getResult(row scanner, columns []string) (map[string]interfac
 		} else {
 			v = val
 		}
-		//fmt.Println("v", v)
 		entry[col] = v
 	}
 
@@ -209,7 +205,6 @@ func (a *Altibase) accRow(element Query, acc telegraf.Accumulator, result_data [
 				fields[v2] = v[v2]
 			}
 		}
-		//fmt.Println("accRow : ", fields)
 		acc.AddFields(element.Measurement, fields, tags)
 	}
 }
