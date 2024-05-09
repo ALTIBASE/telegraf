@@ -1,52 +1,51 @@
 # How to build Telegraf embedded the Altibase Input Plugin
 
-Telegraf input plugins are used to collect metrics from target systems. The Altibase input plugin for Telegraf is provided to gathers metrics from an Altibase database system as one of Telegraf input plugins.
+Telegraf utilizes input plugins to collect metrics from target systems. Among these, the **Altibase input plugin for Telegraf** serves the purpose of collecting metrics from an Altibase database system.
 
-This document shows how to compile Telegraf embedded the Altibase input plugin step by step. Then, consult [Altibase Input Plugin][1] to configure and run the successfully compiled binary executable.
+This document describes the sequential steps to compile Telegraf embedded the Altibase input plugin. Following successful compilation, refer to the [Altibase Input Plugin](https://github.com/ALTIBASE/telegraf/blob/main/altibase/README.md) for configuration and execution instructions.
 
-[1]: https://github.com/jiee-altibase/telegraf/blob/main/altibase/README.md
 
 ### 1. Intall and configure unixODBC
 
-The Altibase input plugin is connected to an Altibase database system through unixODBC. So, it is mandatory to install a unixODBC and configure environment variables for the Altibase input plugin to reference it.
+The Altibase input plugin is connected to an Altibase database system through unixODBC. Therefore, it is mandatory to install a unixODBC and configure environment variables for the Altibase input plugin to reference unixODBC.
 
-unixodbc-2.3.12 version is recommended for higher compatibility and download it at the official [unixODBC homepage](https://www.unixodbc.org).
+It is recommended to install the unixODBC-2.3.12 version for enhanced compatibility. This version can be downloaded from the [official unixODBC homepage](https://www.unixodbc.org/).
 
-After installing it, set environment variables as follows.
+After installation, set environment variables as follows:
 
-```
+```bash
 LD_LIBRARY_PATH = "$HOME/unixodbc/lib:$LD_LIBRARY_PATH"
 CGO_CFLAGS = "-I$HOME/unixodbc/include"
 CGO_LDFLAGS = "-L$HOME/unixodbc/lib"
 ```
 
-### 2. Clone the Telegraf repository:
-
-```
+### 2. Clone the Telegraf repository
+Clone the Telegraf repository using the following command:
+```bash
 git clone https://github.com/influxdata/telegraf.git telegraf
 ```
 The last verified version of Telegraf for the Altibase input plugin is v1.30.2.
 
-### 3. Clone the Altibase input plugin repository:
-
-```
+### 3. Clone the Altibase input plugin repository
+Clone the Altibase input plugin repository with the following command:
+```bash
 git clone https://github.com/ALTIBASE/telegraf.git telegraf_altibase
 ```
 The last verified version of the Altibase input plugin is v1.0.0.
 
 ### 4. Copy the Altibase input plugin into the Telegraf input plugin directory
-
-```
+Copy the Altibase input plugin into the Telegraf input plugin directory using the following command:
+```bash
 cp -r telegraf_altibase/* telegraf/plugins/inputs
 ```
 
 ### 5. Modifiy Makefile
 
-The Makefile is located in the root directory where you cloned the Telegraf repository.
+The Makefile is located in the root directory where the Telegraf repository was cloned.
 
-You must set CGO_ENABLE=1 in the Makefile since the Altibase input plugin requires cgo.
+Modify the Makefile by setting CGO_ENABLE=1 since the Altibase input plugin requires cgo.
 
-```
+```makefile
 ...
 .PHONY: build
 build:
@@ -59,7 +58,9 @@ $(buildbin):
 ```
 
 ### 6. Compile Telegraf embedded the Altibase input plugin
-```
+
+Navigate to the Telegraf directory and execute the following command to compile Telegraf embedded the Altibase input plugin:
+```bash
 cd telegraf
 make build
 ```
