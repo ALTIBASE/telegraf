@@ -29,15 +29,13 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ## Metrics
 
-Altibase plugin gathers the execution results of sql in query.toml, and these SQL mainly queries Altibase's performance views. See the [General Reference-2.The Data Dictionary.md][1]
+The Altibase input plugin gathers the execution results of SQL in query.toml, primarily querying Altibase's performance views. Refer to the [General Reference-2.The Data Dictionary](https://github.com/ALTIBASE/Documents/blob/master/Manuals/Altibase_7.3/eng/General%20Reference-2.The%20Data%20Dictionary.md) for details.
 
-[1]: https://github.com/ALTIBASE/Documents/blob/master/Manuals/Altibase_7.3/eng/General%20Reference-2.The%20Data%20Dictionary.md
 
-Some metrics can be collected only when timed_statistics=1 is set in Altibase server. See the [General Reference-1.Data Types & Altibase Properties.md][2]
+Certain metrics can only be collected when timed_statistics=1 is set in the Altibase server. Refer to the [General Reference-1.Data Types & Altibase Properties](https://github.com/ALTIBASE/Documents/blob/master/Manuals/Altibase_7.3/eng/General%20Reference-1.Data%20Types%20%26%20Altibase%20Properties.md) for details.
 
-[2]: https://github.com/ALTIBASE/Documents/blob/master/Manuals/Altibase_7.3/eng/General%20Reference-1.Data%20Types%20%26%20Altibase%20Properties.md
 
-* altibase - This measurement gathers metrics related to altibase overview. It has following fields.
+* altibase - Metrics related to Altibase overview. This measurement encompasses fields such as:
   * ALTIBASE_VERSION
   * ARCHIVE_MODE
   * DISK_TBL_USAGE      
@@ -62,41 +60,41 @@ Some metrics can be collected only when timed_statistics=1 is set in Altibase se
   * UTRANS_QUERY_COUNT  
   * VICTIM_FAILS        
   * WORKING_TIME        
-* Altibase usage - gathers statistics related to Altibase's memory or disk usage. There are measurements such as:
+* Altibase usage - Statistics related to Altibase's memory or disk usage. There are measurements such as:
   * altibase_memstat_max
   * altibase_memstat_alloc
   * altibase_tbs_total
   * altibase_tbs_usage
   * altibase_mem_tbl_usage
   * altibase_disk_tbl_usage
-* ServiceThread stats - gathers statistics related to service threads of Altibase. There is a measurement such as:
+* ServiceThread stats - Statistics related to the service threads of Altibase. There is a measurement such as:
   * altibase_srv_thr
-* Query stats - gathers query statistics that can affect Altibase's performance. There are measurements such as:
+* Query stats - Query statistics that can affect Altibase's performance. There are measurements such as:
   * altibase_fullscan_query
   * altibase_utrans_query
   * altibase_long_run_query
-* Lock stats - gathers statistics on the queries holding or waiting for locks. There are measurements such as:
+* Lock stats - Statistics on the queries holding or waiting for locks. There are measurements such as:
   * altibase_lock_hold_info
   * altibase_lock_wait_info
   * altibase_tx_of_memory_view_scn
-* File I/O stats - gathers statistics about I/O on individual disk files of Altibase. There are measurements such as:
+* File I/O stats - Statistics about I/O on individual disk files of Altibase. There are measurements such as:
   * altibase_file_io_reads
   * altibase_file_io_wait
   * altibase_file_io_writes
-* Waits stats - gathers statistics on waits classified by wait event. There are measurements such as:
+* Waits stats -Statistics on waits classified by wait event. There are measurements such as:
   * altibase_session_event
   * altibase_system_event
-* Replication gap - gathers replication gaps by replication name. There is a measurement such as:
+* Replication gap - Replication gaps by replication name. There is a measurement such as:
   * altibase_rep_gap
-* Overall system stats - gathers overall statistics for the system. There is a measurement such as:
+* Overall system stats - Overall statistics for the system. There is a measurement such as:
   * altibase_sysstat
 
 ## Tags
 
-* All measurements has following tags.
-  * dsn - the dsn from which the metrics are gathered
+* All measurements have following tags.
+  * dsn - the DSN from which the metrics are gathered
   * host - the host name from which the metrics are gathered
-* altibase_tbs_usage_per_tbsname measurement additionally have the following tag.
+* Measurement 'altibase_tbs_usage_per_tbsname' additionally has the following tag.
   * TBS_NAME - tablespace name
 
 ## Example Output
@@ -107,7 +105,7 @@ When run with:
 ./telegraf --config telegraf.conf --input-filter altibase --test
 ```
 
-It produces:
+The output is as follows:
 
 ```text
 > altibase,dsn=Altiodbc,host=ux-ubuntu WORKING_TIME=3641304i 1713242733000000000
