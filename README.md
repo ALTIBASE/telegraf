@@ -25,12 +25,14 @@ CGO_LDFLAGS = "-L$HOME/unixodbc/lib"
 ```
 git clone https://github.com/influxdata/telegraf.git telegraf
 ```
+The last verified version of Telegraf for the Altibase input plugin is v1.30.2.
 
 ### 3. Clone the Altibase input plugin repository:
 
 ```
 git clone https://github.com/ALTIBASE/telegraf.git telegraf_altibase
 ```
+The last verified version of the Altibase input plugin is v1.0.0.
 
 ### 4. Copy the Altibase input plugin into the Telegraf input plugin directory
 
