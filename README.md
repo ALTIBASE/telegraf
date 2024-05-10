@@ -63,5 +63,6 @@ $(buildbin):
 Navigate to the Telegraf directory and execute the following command to compile Telegraf embedded the Altibase input plugin:
 ```bash
 cd telegraf
+go get github.com/alexbrainman/odbc
 make build
 ```
