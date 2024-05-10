@@ -24,14 +24,14 @@ Clone the Telegraf repository using the following command:
 ```bash
 git clone https://github.com/influxdata/telegraf.git telegraf
 ```
-The last verified version of Telegraf for the Altibase input plugin is v1.30.2.
+The latest Telegraf version compatible with the Altibase input plugin is v1.30.2.
 
 ### 3. Clone the Altibase input plugin repository
 Clone the Altibase input plugin repository with the following command:
 ```bash
 git clone https://github.com/ALTIBASE/telegraf.git telegraf_altibase
 ```
-The last verified version of the Altibase input plugin is v1.0.0.
+The latest version of the Altibase input plugin is v1.0.0.
 
 ### 4. Copy the Altibase input plugin into the Telegraf input plugin directory
 Copy the Altibase input plugin into the Telegraf input plugin directory using the following command:
