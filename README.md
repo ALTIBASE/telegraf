@@ -36,7 +36,8 @@ The latest version of the Altibase input plugin is v1.0.0.
 ### 4. Copy the Altibase input plugin into the Telegraf input plugin directory
 Copy the Altibase input plugin into the Telegraf input plugin directory using the following command:
 ```bash
-cp -r telegraf_altibase/* telegraf/plugins/inputs
+cp telegraf_altibase/all/altibase.go telegraf/plugins/inputs/all
+cp -r telegraf_altibase/altibase telegraf/plugins/inputs
 ```
 
 ### 5. Modifiy Makefile
