@@ -32,7 +32,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 The Altibase input plugin gathers the execution results of SQL in query.toml, primarily querying Altibase's performance views. Refer to the [General Reference-2.The Data Dictionary](https://github.com/ALTIBASE/Documents/blob/master/Manuals/Altibase_7.3/eng/General%20Reference-2.The%20Data%20Dictionary.md) for details.
 
 
-Certain metrics can only be collected when timed_statistics=1 is set in the Altibase server. Refer to the [General Reference-1.Data Types & Altibase Properties](https://github.com/ALTIBASE/Documents/blob/master/Manuals/Altibase_7.3/eng/General%20Reference-1.Data%20Types%20%26%20Altibase%20Properties.md) for details.
+Certain metrics can only be collected when TIMED_STATISTICS=1 is set in the Altibase server. Refer to the [General Reference-1.Data Types & Altibase Properties](https://github.com/ALTIBASE/Documents/blob/master/Manuals/Altibase_7.3/eng/General%20Reference-1.Data%20Types%20%26%20Altibase%20Properties.md) for details.
 
 
 * altibase - Metrics related to Altibase overview. This measurement encompasses fields such as:
