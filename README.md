@@ -15,8 +15,6 @@ After installation, set environment variables as follows:
 
 ```bash
 LD_LIBRARY_PATH = "$HOME/unixodbc/lib:$LD_LIBRARY_PATH"
-CGO_CFLAGS = "-I$HOME/unixodbc/include"
-CGO_LDFLAGS = "-L$HOME/unixodbc/lib"
 ```
 
 ### 2. Clone the Telegraf repository
