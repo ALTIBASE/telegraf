@@ -58,7 +58,14 @@ $(buildbin):
 
 ### 6. Compile Telegraf embedded the Altibase input plugin
 
-Navigate to the Telegraf directory and execute the following command to compile Telegraf embedded the Altibase input plugin:
+The method of compiling Telegraf embedded the Altibase input plugin varies depending on the SQLLEN size of unixODBC, so check the SQLLEN size by executing the command below.
+```bash
+${UNIX_ODBC}/bin/odbcinst -j
+```
+
+Then, navigate to the Telegraf directory and execute with one of the commands below:
+
+If SQLLEN=8
 ```bash
 CGO_CFLAGS = "-I$HOME/unixodbc/include"
 CGO_LDFLAGS = "-L$HOME/unixodbc/lib"
@@ -68,7 +75,7 @@ go get github.com/alexbrainman/odbc
 make build
 ```
 
-If SQLLEN=4 on your unixODBC, execute the following command instead of the above command.
+If SQLLEN=4
 ```bash
 CGO_CFLAGS = "-I$HOME/unixodbc/include -DBUILD_LEGACY_64_BIT_MODE=1"
 CGO_LDFLAGS = "-L$HOME/unixodbc/lib -lodbc"
@@ -76,9 +83,4 @@ CGO_LDFLAGS = "-L$HOME/unixodbc/lib -lodbc"
 cd telegraf
 go get github.com/alexbrainman/odbc
 make build
-```
-
-For reference, the method for checking the SQLLEN size of unixODBC is as follows.
-```bash
-${UNIX_ODBC}/bin/odbcinst -j
 ```
