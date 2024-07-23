@@ -19,7 +19,7 @@ export LD_LIBRARY_PATH="$UNIX_ODBC/lib:$LD_LIBRARY_PATH"
 export ODBCINI=${UNIX_ODBC}/etc/odbc.ini
 ```
 
-Additionally, you must complete some required settings, but these are beyond the scope of this guide, so please refer to [unixODBC Guide for Altibase(Korean)](https://docs.altibase.com/pages/viewpage.action?pageId=11698379).
+To establish a connection between the installed unixODBC and Altibase server, further configuration is necessary. As this process falls beyond the scope of this guide, please refer to [unixODBC Guide for Altibase(Korean)](https://docs.altibase.com/x/y4Cy) for detailed instructions.
 
 ### 2. Clone the Telegraf repository
 Clone the Telegraf repository using the following command:
