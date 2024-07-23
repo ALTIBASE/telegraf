@@ -18,6 +18,8 @@ export UNIX_ODBC="unixODBC installed path"
 export LD_LIBRARY_PATH="$UNIX_ODBC/lib:$LD_LIBRARY_PATH"
 ```
 
+For more information about unixODBC settings, please refer to [unixODBC Guide for Altibase(Korean)](https://docs.altibase.com/pages/viewpage.action?pageId=11698379).
+
 ### 2. Clone the Telegraf repository
 Clone the Telegraf repository using the following command:
 ```bash
