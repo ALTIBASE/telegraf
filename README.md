@@ -16,9 +16,10 @@ After installation, set environment variables as follows:
 ```bash
 export UNIX_ODBC="unixODBC installed path"
 export LD_LIBRARY_PATH="$UNIX_ODBC/lib:$LD_LIBRARY_PATH"
+export ODBCINI=${UNIX_ODBC}/etc/odbc.ini
 ```
 
-For more information about unixODBC settings, please refer to [unixODBC Guide for Altibase(Korean)](https://docs.altibase.com/pages/viewpage.action?pageId=11698379).
+Additionally, you must complete some required settings, but these are beyond the scope of this guide, so please refer to [unixODBC Guide for Altibase(Korean)](https://docs.altibase.com/pages/viewpage.action?pageId=11698379).
 
 ### 2. Clone the Telegraf repository
 Clone the Telegraf repository using the following command:
