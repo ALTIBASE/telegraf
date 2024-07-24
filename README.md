@@ -14,10 +14,12 @@ It is recommended to install the unixODBC-2.3.12 version for enhanced compatibil
 After installation, set environment variables as follows:
 
 ```bash
-LD_LIBRARY_PATH = "$HOME/unixodbc/lib:$LD_LIBRARY_PATH"
-CGO_CFLAGS = "-I$HOME/unixodbc/include"
-CGO_LDFLAGS = "-L$HOME/unixodbc/lib"
+export UNIX_ODBC="unixODBC installed path"
+export LD_LIBRARY_PATH="$UNIX_ODBC/lib:$LD_LIBRARY_PATH"
+export ODBCINI=${UNIX_ODBC}/etc/odbc.ini
 ```
+
+To establish a connection between the installed unixODBC and Altibase server, further configuration is necessary. As this process falls beyond the scope of this guide, please refer to [unixODBC Guide for Altibase(Korean)](https://docs.altibase.com/x/y4Cy) for detailed instructions.
 
 ### 2. Clone the Telegraf repository
 Clone the Telegraf repository using the following command:
@@ -60,7 +62,28 @@ $(buildbin):
 
 ### 6. Compile Telegraf embedded the Altibase input plugin
 
-Navigate to the Telegraf directory and execute the following command to compile Telegraf embedded the Altibase input plugin:
+Before compiling Telegraf embedded the Altibase input, you need to set some environment variables.
+
+This depends on the SQLLEN size of unixODBC, so check the SQLLEN size by executing the command below.
+```bash
+${UNIX_ODBC}/bin/odbcinst -j
+```
+
+Then, set environment variables according to SQLLEN size.
+
+If SQLLEN=8
+```bash
+export CGO_CFLAGS="-I$UNIX_ODBC/include"
+export CGO_LDFLAGS="-L$UNIX_ODBC/lib"
+```
+
+If SQLLEN=4
+```bash
+export CGO_CFLAGS="-I$UNIX_ODBC/include -DBUILD_LEGACY_64_BIT_MODE=1"
+export CGO_LDFLAGS="-L$UNIX_ODBC/lib -lodbc"
+```
+
+Finally, navigate to the Telegraf directory and execute the following command to compile Telegraf embedded the Altibase input plugin:
 ```bash
 cd telegraf
 go get github.com/alexbrainman/odbc
